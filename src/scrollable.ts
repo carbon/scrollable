@@ -133,7 +133,7 @@ module Carbon {
     }
   
     setPercent(p: number) {  
-      var top = p * (this.height - this.handleEl.clientHeight));
+      var top = p * (this.height - this.handleEl.clientHeight);
   
       this.handleEl.style.top = top + 'px';
     }

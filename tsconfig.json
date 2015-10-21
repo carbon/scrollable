@@ -5,9 +5,9 @@
     "removeComments": true,
     "watch": false,
     "sourceMap": false,
-    "outDir": "dist"
+    "outDir": "lib/"
   },
   "files": [
-    "scrollable.ts"
+    "src/scrollable.ts"
   ]
 }
