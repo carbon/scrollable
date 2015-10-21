@@ -1,0 +1,12 @@
+{
+  "name": "scrollable",
+  "version": "1.0.0",
+  "main": "scrollable.ts",
+  "author": "Jason Nelson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/carbon/scrollable.git"
+  },
+  "homepage": "https://github.com/carbon/scrollable"
+}
