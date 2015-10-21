@@ -4,6 +4,10 @@
     "module": "commonjs",
     "removeComments": true,
     "watch": false,
-    "sourceMap": false
-  }
+    "sourceMap": false,
+    "outDir": "dist"
+  },
+  "files": [
+    "scrollable.ts"
+  ]
 }
