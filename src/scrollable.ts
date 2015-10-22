@@ -39,13 +39,13 @@ module Carbon {
     element: HTMLElement;
     handleEl: HTMLElement;
     height: number;
-    
-    dragging: boolean = false;
         
     handleHeight: number;
     baseY: number;
     mouseStartY: number;
     
+    dragging = false;
+        
     options: any;
     
     constructor(element: HTMLElement, options) {
@@ -81,8 +81,8 @@ module Carbon {
       UserSelect.block();
       
       this.mouseStartY = e.pageY;
-      this.baseY = parseInt($(this.handleEl).css('top'), 10);
-  
+      this.baseY = this.handleEl.offsetTop; 
+      
       // Handle Offset
       this.ho = Util.getRelativePositionY(e.pageY, this.handleEl) * this.handleHeight;
    
