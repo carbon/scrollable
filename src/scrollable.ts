@@ -109,9 +109,7 @@ module Carbon {
     update(e) {
       if (e.type == 'mousemove') this.element.classList.add('dragging');
   
-      var delta = e.pageY - this.mouseStartY;
-  
-      // console.log(delta);
+      let delta = e.pageY - this.mouseStartY;
   
       var top = this.baseY + delta;
   
@@ -119,13 +117,13 @@ module Carbon {
         top = 0;
       }
   
-      if(top > this.height - this.handleHeight) {
+      if (top > this.height - this.handleHeight) {
         top = this.height - this.handleHeight;
       }
   
       this.handleEl.style.top = top + 'px';
       
-      var percent = top / (this.height - this.handleHeight);
+      let percent = top / (this.height - this.handleHeight);
   
       if (this.options.onChange) {
         this.options.onChange(percent);
@@ -167,7 +165,7 @@ module Carbon {
         onChange: this.onScroll.bind(this)
       });
   
-      var ua = navigator.userAgent;
+      let ua = navigator.userAgent;
   
       if (!options.force && (ua.indexOf('Macintosh') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1)) {
         this.native = true;
@@ -180,7 +178,7 @@ module Carbon {
         $(this.contentEl).on('mousewheel', this.onMouseWheel.bind(this));
       }
       
-      $(window).on('resize', this.setup.bind(this));
+      window.addEventListener('resize', this.setup.bind(this));
       
       $(this.element).data('controller', this); 
   
@@ -191,7 +189,7 @@ module Carbon {
       this.setup();
     }
     
-    setup() {
+    setup() {      
       this.viewportHeight = this.contentEl.clientHeight;
   
       this.contentHeight = this.contentEl.scrollHeight;
@@ -229,7 +227,7 @@ module Carbon {
     }
   
     onScroll(value: number) {      
-      var top = (this.contentHeight - this.viewportHeight) * value;
+      let top = (this.contentHeight - this.viewportHeight) * value;
   
       this.scrollTo(top);
     }
@@ -258,7 +256,7 @@ module Carbon {
       
       this.scrollTo(top);
   
-      var percent = top / this.maxTop;
+      let percent = top / this.maxTop;
       
       this.rail.setPercent(percent);
     }
