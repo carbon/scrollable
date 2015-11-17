@@ -139,6 +139,14 @@ module Carbon {
     
     native = false;
         
+    static get(element: HTMLElement) { 
+      var instance = $(element).data('controller') || new Scrollable(element);
+      
+      instance.poke();
+      
+      return instance;
+    }
+    
     constructor(element: HTMLElement, options = { }) {
       this.element = element;
   

@@ -1,3 +1,11 @@
+1.0.4
+----
+* Add Carbon.Scrollable.get(element);
+
+1.0.3
+----
+* Use native wheel event
+
 1.0.2
 -----
 * Use native window resize event handler
