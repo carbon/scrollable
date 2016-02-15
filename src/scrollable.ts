@@ -1,27 +1,29 @@
-module Carbon {
-  "use strict";
-   
+"use strict";
+
+module Carbon {   
   var UserSelect = {
-    block: function() {
+    blockSelect(e: Event) { 
+     e.preventDefault();
+     e.stopPropagation();
+    },
+    
+    block() {
       document.body.focus();
       
-      $(document).on('selectstart', false);
+      document.addEventListener('selectstart', UserSelect.blockSelect, true);
     },
-    unblock: function() {
-       $(document).off('selectstart');
+    
+    unblock() {
+       document.removeEventListener('selectstart', UserSelect.blockSelect, true);
     }    
   };
 
   var Util = {
-    getRelativePositionX: function(x: number, relativeElement: HTMLElement) {
-      let leftOffset = $(relativeElement).offset().left;
-      
-      return Math.max(0, Math.min(1, (x - leftOffset) / relativeElement.offsetWidth));
-    },
-  
-   getRelativePositionY: function(y, relativeElement: HTMLElement) {
-      let topOffset = $(relativeElement).offset().top;
-  
+   getRelativePositionY(y, relativeElement: HTMLElement) {
+      let box = relativeElement.getBoundingClientRect();
+     
+      let topOffset = box.top;
+             
       return Math.max(0, Math.min(1, (y - topOffset) / relativeElement.offsetHeight));
     }
   };
@@ -38,6 +40,8 @@ module Carbon {
     dragging = false;
         
     options: any;
+    
+    listeners: Observer[] = [ ];
     
     constructor(element: HTMLElement, options) {
       this.element = element;
@@ -68,33 +72,35 @@ module Carbon {
       this.handleHeight =  this.handleEl.clientHeight;
     }
   
-    startDrag(e) {
+    startDrag(e: MouseEvent) {
       UserSelect.block();
       
       this.mouseStartY = e.pageY;
       this.baseY = this.handleEl.offsetTop; 
       
       // Handle Offset
-      this.ho = Util.getRelativePositionY(e.pageY, this.handleEl) * this.handleHeight;
+      // this.handleOffset = Util.getRelativePositionY(e.pageY, this.handleEl) * this.handleHeight;
    
       this.dragging = true;
      
       this.update(e);
-  
-      return $(document).on({
-        mousemove : this.update.bind(this),
-        mouseup   : this.endDrag.bind(this)
-      });
+  	 
+      this.listeners.push(
+        new Observer(document, 'mousemove', this.update.bind(this)),
+        new Observer(document, 'mouseup', this.endDrag.bind(this))
+      );
     }
   
-    endDrag(e) {
+    endDrag(e: MouseEvent) {
       UserSelect.unblock();
       
       this.dragging = false;
   
       this.update(e);
       
-      $(document).off('mousemove mouseup');
+      while (this.listeners.length > 0) {        
+        this.listeners.pop().stop();
+      }
     }
   
     update(e) {
@@ -128,7 +134,10 @@ module Carbon {
     }
   }
   
+  
   export class Scrollable {
+    static instances = new WeakMap<HTMLElement, Scrollable>();
+        
     element: HTMLElement;
     contentEl: HTMLElement;
     rail: Rail;
@@ -137,17 +146,17 @@ module Carbon {
     contentHeight: number;
     maxTop: number;
     
-    native = false;
-        
-    static get(element: HTMLElement) { 
-      var instance = $(element).data('controller') || new Scrollable(element);
+    native = false;   
+
+    static get(el: HTMLElement) : Scrollable {
+      let instance = Scrollable.instances.get(el) || new Scrollable(el);
       
       instance.poke();
       
       return instance;
     }
     
-    constructor(element: HTMLElement, options = { }) {
+    constructor(element: HTMLElement, options : any = { }) {
       this.element = element;
   
       if (this.element.classList.contains('setup')) return;
@@ -178,10 +187,10 @@ module Carbon {
       }
       
       window.addEventListener('resize', this.setup.bind(this));
-      
-      $(this.element).data('controller', this); 
-  
+     
       this.setup();   
+  
+      Scrollable.instances.set(this.element, this);
     }
   
     poke() {
@@ -201,19 +210,19 @@ module Carbon {
       
       if (contentInViewPercent >= 1) {
         this.element.classList.remove('overflowing');
-  
-        $(this.element).trigger('inview');
-  
+  	 
+        trigger(this.element, 'inview');
+        
         if (!this.native) {
           this.rail.hide();
         }
       }
       else {
         this.element.classList.add('overflowing');
-  
-        $(this.element).trigger('overflowing');
+  	 
+    	  trigger(this.element, 'overflowing');
     
-       if (!this.native) {
+        if (!this.native) {
           this.rail.show();
         }
       }
@@ -233,14 +242,9 @@ module Carbon {
   
     scrollTo(top: number) {
       this.contentEl.scrollTop = top;
-  
-      $(this.element).triggerHandler({
-        type : 'scroll',
-        top  : top
-      });
     }
   
-    onWheel(e) {
+    onWheel(e: WheelEvent) {
       e.preventDefault();
       
       // TODO: Support line & page scrolling w/ deltaMode
@@ -262,5 +266,22 @@ module Carbon {
       
       this.rail.setPercent(percent);
     }
+  }
+  
+  class Observer {
+    constructor(public element: Element | Document, public type, public handler, public useCapture = false) {
+      this.element.addEventListener(type, handler, useCapture);
+    }
+     
+    stop() {
+      this.element.removeEventListener(this.type, this.handler, this.useCapture)
+    }
+  }
+  
+  function trigger(element: Element | Window, name: string, detail?) : boolean {
+    return element.dispatchEvent(new CustomEvent(name, {
+      bubbles: true,
+      detail: detail
+    }));
   }
 }
