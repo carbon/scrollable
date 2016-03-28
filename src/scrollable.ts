@@ -199,13 +199,13 @@ module Carbon {
     watch() { 
       if (window.MutationObserver) {
         this.observer = new MutationObserver(mutations => {
-          console.log('mutation, checking'); 
+          console.log('mutation, checking', mutations); 
          
           this.check();
         });
         
         this.observer.observe(this.element, {
-          attributes: true,
+          attributes: false,
           childList: true
         });
       }
