@@ -19,7 +19,7 @@ module Carbon {
   };
 
   var Util = {
-   getRelativePositionY(y, relativeElement: HTMLElement) {
+    getRelativePositionY(y, relativeElement: HTMLElement) {
       let box = relativeElement.getBoundingClientRect();
      
       let topOffset = box.top;
@@ -148,6 +148,8 @@ module Carbon {
     
     native = false;   
 
+    observer: MutationObserver;
+    
     static get(el: HTMLElement) : Scrollable {
       let instance = Scrollable.instances.get(el) || new Scrollable(el);
       
@@ -186,18 +188,34 @@ module Carbon {
         this.contentEl.addEventListener('wheel', this.onWheel.bind(this), true);
       }
       
-      window.addEventListener('resize', this.setup.bind(this));
-     
-      this.setup();   
+      window.addEventListener('resize', this.check.bind(this));
+
+      
+      this.check();   
   
       Scrollable.instances.set(this.element, this);
     }
-  
+
+    watch() { 
+      if (window.MutationObserver) {
+        this.observer = new MutationObserver(mutations => {
+          console.log('mutation, checking'); 
+         
+          this.check();
+        });
+        
+        this.observer.observe(this.element, {
+          attributes: true,
+          childList: true
+        });
+      }
+    }  
+    
     poke() {
-      this.setup();
+      this.check();
     }
     
-    setup() {      
+    check() {      
       this.viewportHeight = this.contentEl.clientHeight;
   
       this.contentHeight = this.contentEl.scrollHeight;
@@ -265,6 +283,13 @@ module Carbon {
       let percent = top / this.maxTop;
       
       this.rail.setPercent(percent);
+    }
+    
+    dispose() {
+      if (this.observer) { 
+        this.observer = null;
+        this.observer.disconnect();
+      } 
     }
   }
   
