@@ -1,7 +1,7 @@
 "use strict";
 
 module Carbon {   
-  var UserSelect = {
+  let UserSelect = {
     blockSelect(e: Event) { 
      e.preventDefault();
      e.stopPropagation();
@@ -18,8 +18,8 @@ module Carbon {
     }    
   };
 
-  var Util = {
-    getRelativePositionY(y, relativeElement: HTMLElement) {
+  let Util = {
+    getRelativePositionY(y: number, relativeElement: HTMLElement) {
       let box = relativeElement.getBoundingClientRect();
      
       let topOffset = box.top;
@@ -28,7 +28,7 @@ module Carbon {
     }
   };
 
-  class Rail {
+  class Scrollbar {
     element: HTMLElement;
     handleEl: HTMLElement;
     height: number;
@@ -132,6 +132,11 @@ module Carbon {
   
       this.handleEl.style.top = top + 'px';
     }
+
+
+    destroy() {
+      this.element.remove();
+    }
   }
   
   
@@ -140,7 +145,7 @@ module Carbon {
         
     element: HTMLElement;
     contentEl: HTMLElement;
-    rail: Rail;
+    scrollbar: Scrollbar;
     
     viewportHeight: number;
     contentHeight: number;
@@ -161,36 +166,35 @@ module Carbon {
     constructor(element: HTMLElement, options : any = { }) {
       this.element = element;
   
-      if (this.element.classList.contains('setup')) return;
+      if (this.element.dataset['setup']) return;
   
-      this.element.classList.add('setup');
-  
+      this.element.dataset['setup'] = 'true';
+
       this.contentEl = <HTMLElement>this.element.querySelector('.content');
     
       if (!this.contentEl) throw new Error('.content not found');
       
-      let railEl = <HTMLElement>this.element.querySelector('carbon-scrollbar, .rail');
-  
-      this.rail = new Rail(railEl, {
-        onChange: this.onScroll.bind(this)
-      });
+      let scrollBarEl = <HTMLElement>this.element.querySelector('.scrollbar');
   
       let ua = navigator.userAgent;
   
       if (!options.force && (ua.indexOf('Macintosh') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1)) {
         this.native = true;
   
-        this.rail.element.remove();
+        scrollBarEl.remove();
   
         this.element.classList.add('native');
       }
       else {  
+        this.scrollbar = new Scrollbar(scrollBarEl, {
+          onChange: this.onScroll.bind(this)
+        });
+
         this.contentEl.addEventListener('wheel', this.onWheel.bind(this), true);
       }
       
       window.addEventListener('resize', this.check.bind(this));
 
-      
       this.check();   
   
       Scrollable.instances.set(this.element, this);
@@ -231,24 +235,20 @@ module Carbon {
   	 
         trigger(this.element, 'inview');
         
-        if (!this.native) {
-          this.rail.hide();
-        }
+        this.scrollbar && this.scrollbar.hide();
       }
       else {
         this.element.classList.add('overflowing');
   	 
     	  trigger(this.element, 'overflowing');
     
-        if (!this.native) {
-          this.rail.show();
-        }
+        this.scrollbar && this.scrollbar.show();
       }
     
-      if (!this.native) {
-        this.rail.handleEl.style.height = handleHeight + 'px';
+      if (this.scrollbar) {
+        this.scrollbar.handleEl.style.height = handleHeight + 'px';
   
-        this.rail.setup();
+        this.scrollbar.setup();
       }
     }
   
@@ -282,7 +282,7 @@ module Carbon {
   
       let percent = top / this.maxTop;
       
-      this.rail.setPercent(percent);
+      this.scrollbar.setPercent(percent);
     }
     
     dispose() {
