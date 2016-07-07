@@ -44,10 +44,14 @@ module Carbon {
     listeners: Observer[] = [ ];
     
     constructor(element: HTMLElement, options) {
+      if (!element) throw new Error('[Scrollbar] element is undefined');
+
       this.element = element;
   
       this.handleEl = <HTMLElement>this.element.querySelector('.handle');
-      
+
+      if (!this.handleEl) throw new Error('[Scrollbar] missing .handle');
+
       this.element.addEventListener('mouseover', () => { this.element.classList.add('hovering'); });
       this.element.addEventListener('mouseout', () => { this.element.classList.remove('hovering'); });
       this.element.addEventListener('click', (e) => { e.preventDefault(); });
@@ -104,8 +108,10 @@ module Carbon {
     }
   
     update(e) {
-      if (e.type == 'mousemove') this.element.classList.add('dragging');
-  
+      if (e.type == 'mousemove') {
+        this.element.classList.add('dragging');
+      }
+
       let delta = e.pageY - this.mouseStartY;
   
       var top = this.baseY + delta;
@@ -138,8 +144,7 @@ module Carbon {
       this.element.remove();
     }
   }
-  
-  
+
   export class Scrollable {
     static instances = new WeakMap<HTMLElement, Scrollable>();
         
@@ -164,11 +169,13 @@ module Carbon {
     }
     
     constructor(element: HTMLElement, options : any = { }) {
+      if (!element) throw new Error('[Scrollable] element is undefined');
+
       this.element = element;
   
       if (this.element.dataset['setup']) return;
   
-      this.element.dataset['setup'] = 'true';
+      this.element.dataset['setup'] = '1';
 
       this.contentEl = <HTMLElement>this.element.querySelector('.content');
     
@@ -181,7 +188,7 @@ module Carbon {
       if (!options.force && (ua.indexOf('Macintosh') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1)) {
         this.native = true;
   
-        scrollBarEl.remove();
+        scrollBarEl && scrollBarEl.remove();
   
         this.element.classList.add('native');
       }
@@ -201,18 +208,18 @@ module Carbon {
     }
 
     watch() { 
-      if (window.MutationObserver) {
-        this.observer = new MutationObserver(mutations => {
-          console.log('mutation, checking', mutations); 
-         
-          this.check();
-        });
+      if (!MutationObserver) return;
+
+      this.observer = new MutationObserver(mutations => {
+        console.log('mutation, checking', mutations); 
         
-        this.observer.observe(this.element, {
-          attributes: false,
-          childList: true
-        });
-      }
+        this.check();
+      });
+      
+      this.observer.observe(this.element, {
+        attributes: false,
+        childList: true
+      });
     }  
     
     poke() {
@@ -242,13 +249,13 @@ module Carbon {
   	 
     	  trigger(this.element, 'overflowing');
     
-        this.scrollbar && this.scrollbar.show();
-      }
-    
-      if (this.scrollbar) {
-        this.scrollbar.handleEl.style.height = handleHeight + 'px';
+        if (this.scrollbar) {
+          this.scrollbar.show();
+
+          this.scrollbar.handleEl.style.height = handleHeight + 'px';
   
-        this.scrollbar.setup();
+          this.scrollbar.setup();
+        }
       }
     }
   
