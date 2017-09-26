@@ -1,5 +1,3 @@
-"use strict";
-
 module Carbon {   
   let UserSelect = {
     blockSelect(e: Event) { 
@@ -48,7 +46,7 @@ module Carbon {
 
       this.element = element;
   
-      this.handleEl = <HTMLElement>this.element.querySelector('.handle');
+      this.handleEl = this.element.querySelector('.handle') as HTMLElement;
 
       if (!this.handleEl) throw new Error('[Scrollbar] missing .handle');
 
@@ -177,11 +175,11 @@ module Carbon {
   
       this.element.dataset['setup'] = '1';
 
-      this.contentEl = <HTMLElement>this.element.querySelector('.content');
+      this.contentEl = this.element.querySelector('.content') as HTMLElement;
     
       if (!this.contentEl) throw new Error('.content not found');
       
-      let scrollBarEl = <HTMLElement>this.element.querySelector('.scrollbar');
+      let scrollBarEl = this.element.querySelector('.scrollbar') as HTMLElement;
   
       let ua = navigator.userAgent;
   

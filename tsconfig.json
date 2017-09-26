@@ -2,10 +2,12 @@
   "compilerOptions": {
     "target": "es5",
     "module": "commonjs",
+    "alwaysStrict": true,
     "removeComments": true,
     "watch": false,
     "sourceMap": false,
-    "outDir": "lib/"
+    "lib": [ "dom", "es5", "es6" ],    
+    "outDir": "lib/"    
   },
   "files": [
     "src/scrollable.ts"
