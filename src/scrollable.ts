@@ -12,11 +12,11 @@ module Carbon {
     },
     
     unblock() {
-       document.removeEventListener('selectstart', UserSelect.blockSelect, true);
+       document.removeEventListener('selectstart', UserSelect.blockSelect);
     }    
   };
 
-  let Util = {
+  let _ = {
     getRelativePositionY(y: number, relativeElement: HTMLElement) {
       let box = relativeElement.getBoundingClientRect();
      
@@ -52,10 +52,8 @@ module Carbon {
 
       this.element.addEventListener('mouseover', () => { this.element.classList.add('hovering'); });
       this.element.addEventListener('mouseout', () => { this.element.classList.remove('hovering'); });
-      this.element.addEventListener('click', (e) => { e.preventDefault(); });
            
       this.handleEl.addEventListener('mousedown', this.startDrag.bind(this));
-      this.handleEl.addEventListener('mouseup', this.endDrag.bind(this));
   
       this.options = options || { };
       this.setup();
@@ -75,16 +73,18 @@ module Carbon {
     }
   
     startDrag(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+
       UserSelect.block();
       
       this.mouseStartY = e.pageY;
       this.baseY = this.handleEl.offsetTop; 
       
-      // Handle Offset
-      // this.handleOffset = Util.getRelativePositionY(e.pageY, this.handleEl) * this.handleHeight;
-   
       this.dragging = true;
      
+      this.element.classList.add('dragging');
+
       this.update(e);
   	 
       this.listeners.push(
@@ -94,9 +94,14 @@ module Carbon {
     }
   
     endDrag(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      
       UserSelect.unblock();
       
       this.dragging = false;
+
+      this.element.classList.remove('dragging');
   
       this.update(e);
       
@@ -106,10 +111,6 @@ module Carbon {
     }
   
     update(e) {
-      if (e.type == 'mousemove') {
-        this.element.classList.add('dragging');
-      }
-
       let delta = e.pageY - this.mouseStartY;
   
       var top = this.baseY + delta;
@@ -131,12 +132,11 @@ module Carbon {
       }
     }
   
-    setPercent(p: number) {  
-      let top = p * (this.height - this.handleEl.clientHeight);
+    setPosition(position: number) {  
+      let top = position * (this.height - this.handleEl.clientHeight);
   
       this.handleEl.style.top = top + 'px';
     }
-
 
     destroy() {
       this.element.remove();
@@ -201,20 +201,22 @@ module Carbon {
       window.addEventListener('resize', this.check.bind(this));
 
       this.check();   
+      this.watch();
   
       Scrollable.instances.set(this.element, this);
     }
 
     watch() { 
+
+      if (this.observer) return;
+
       if (!MutationObserver) return;
 
       this.observer = new MutationObserver(mutations => {
-        console.log('mutation, checking', mutations); 
-        
         this.check();
       });
       
-      this.observer.observe(this.element, {
+      this.observer.observe(this.contentEl, {
         attributes: false,
         childList: true
       });
@@ -270,7 +272,6 @@ module Carbon {
     onWheel(e: WheelEvent) {
       e.preventDefault();
       
-      // TODO: Support line & page scrolling w/ deltaMode
       let distance = e.deltaY * 1;
       
       var top = this.contentEl.scrollTop;
@@ -285,9 +286,9 @@ module Carbon {
       
       this.scrollTo(top);
   
-      let percent = top / this.maxTop;
+      let position = top / this.maxTop;
       
-      this.scrollbar.setPercent(percent);
+      this.scrollbar.setPosition(position);
     }
     
     dispose() {
