@@ -1,6 +1,6 @@
 <div class="scrollable" style="height:500px;width:500px">
 
-	<div class="rail">
+	<div class="scrollbar">
 		<div class="handle"></div>
 	</div>
 
@@ -21,10 +21,14 @@
 
 <br /> <br />
 
+<button>Insert</button>
+
+<br /> <br />
+
 
 <div class="scrollable" style="height:300px;width:300px">
 
-	<div class="rail">
+	<div class="scrollbar">
 		<div class="handle"></div>
 	</div>
 
@@ -52,49 +56,40 @@
 	</div>
 </div>
 
-<style>
-
-.scrollable {
-	position: relative;
-}
-
-.scrollable > .content {
-	height: 100%;
-	height: 100%;
-	overflow: hidden;
-}
-
-.scrollable > .rail {
-	position: absolute;
-	right: 0;
-	top: 0;
-	bottom: 0;
-	height: 100%;
-	width: 10px;
-}
-
-
-.scrollable > .rail > .handle {
-	position: absolute;
-	top: 0;
-	right: 0;
-	border-radius: 6px;
-	background-color: red;
-	height: 80px;
-	width: 6px;
-}
-
-</style>
 
 
 
-<script src="https://cmsites.global.ssl.fastly.net/kits/master/base/base.js"></script>
+<template id="content">
+	<p>The quick brown fox.</p>
+</template>
+
+<link href="scrollable.css" rel="stylesheet" />
+
 
 <script src="../lib/scrollable.js"></script>
 
 <script>
-$('.scrollable').each(function() {
-	new Carbon.Scrollable(this, { force: true });
+
+for (var el of document.querySelectorAll('.scrollable')) {
+	let scrollable = new Carbon.Scrollable(el, { force: true });
+
+	scrollable.watch();
+}
+
+document.querySelector('button').addEventListener('click', e => {
+
+
+	var html = document.getElementById('content').innerHTML;
+
+	var contentEl = document.querySelector('.scrollable .content');
+
+	contentEl.insertAdjacentHTML('afterbegin', html);
+
+
 });
+
+
+
+
 </script>
 
