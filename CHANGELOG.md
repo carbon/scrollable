@@ -1,3 +1,7 @@
+3.0.0
+---
+* Observe when content changes
+
 1.0.4
 ----
 * Add Carbon.Scrollable.get(element);
