@@ -42,17 +42,16 @@ module Carbon {
     listeners: Observer[] = [ ];
     
     constructor(element: HTMLElement, options) {
-      if (!element) throw new Error('[Scrollbar] element is undefined');
-
+      if (!element) { 
+        throw new Error('[Scrollbar] element is undefined');
+      }
+      
       this.element = element;
   
       this.handleEl = this.element.querySelector('.handle') as HTMLElement;
 
       if (!this.handleEl) throw new Error('[Scrollbar] missing .handle');
 
-      this.element.addEventListener('mouseover', () => { this.element.classList.add('hovering'); });
-      this.element.addEventListener('mouseout', () => { this.element.classList.remove('hovering'); });
-           
       this.handleEl.addEventListener('mousedown', this.startDrag.bind(this));
   
       this.options = options || { };
@@ -113,7 +112,7 @@ module Carbon {
     update(e) {
       let delta = e.pageY - this.mouseStartY;
   
-      var top = this.baseY + delta;
+      let top = this.baseY + delta;
   
       if (top < 0) {
         top = 0;
@@ -156,8 +155,9 @@ module Carbon {
     
     native = false;   
 
-    observer: MutationObserver;
-    
+    mutationObserver: MutationObserver;
+    resizeObserver: ResizeObserver;
+
     static get(el: HTMLElement) : Scrollable {
       let instance = Scrollable.instances.get(el) || new Scrollable(el);
       
@@ -198,7 +198,17 @@ module Carbon {
         this.contentEl.addEventListener('wheel', this.onWheel.bind(this), true);
       }
       
-      window.addEventListener('resize', this.check.bind(this));
+      if (window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver(entries => {
+          this.check();
+        });
+
+        this.resizeObserver.observe(this.element);
+        
+      }
+      else {
+        window.addEventListener('resize', this.check.bind(this));
+      }
 
       this.check();   
       this.watch();
@@ -206,19 +216,19 @@ module Carbon {
       Scrollable.instances.set(this.element, this);
     }
 
-    watch() { 
-
-      if (this.observer) return;
+    watch() {
+      if (this.mutationObserver) return;
 
       if (!MutationObserver) return;
 
-      this.observer = new MutationObserver(mutations => {
+      this.mutationObserver = new MutationObserver(mutations => {
         this.check();
       });
       
-      this.observer.observe(this.contentEl, {
+      this.mutationObserver.observe(this.contentEl, {
         attributes: false,
-        childList: true
+        childList: true,
+        subtree: true
       });
     }  
     
@@ -269,12 +279,18 @@ module Carbon {
       this.contentEl.scrollTop = top;
     }
   
-    onWheel(e: WheelEvent) {
-      e.preventDefault();
+    onWheel(e: WheelEvent) {      
+      e.preventDefault(); // prevent the entire browser window from being scrolled
       
+      let containerEl = e.target.closest('.scrollable');
+
+      // Ensure that the event wasn't handled by a nested scrollable element
+      if (containerEl !== this.element) {
+        return;
+      }
+
       let distance = e.deltaY * 1;
-      
-      var top = this.contentEl.scrollTop;
+      let top = this.contentEl.scrollTop;
   
       top += distance;
   
@@ -292,10 +308,15 @@ module Carbon {
     }
     
     dispose() {
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+        this.resizeObserver = null;
+      }
+
       if (this.observer) { 
-        this.observer = null;
         this.observer.disconnect();
-      } 
+        this.observer = null;
+      }
     }
   }
   
