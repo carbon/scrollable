@@ -29,16 +29,15 @@ module Carbon {
   class Scrollbar {
     element: HTMLElement;
     handleEl: HTMLElement;
-    height: number;
-        
-    handleHeight: number;
     baseY: number;
     mouseStartY: number;
     
     dragging = false;
-        
     options: any;
-    
+    autohide: boolean;
+    timeout: number;
+    active = true;
+
     listeners: Observer[] = [ ];
     
     constructor(element: HTMLElement, options) {
@@ -55,20 +54,30 @@ module Carbon {
       this.handleEl.addEventListener('mousedown', this.startDrag.bind(this));
   
       this.options = options || { };
-      this.setup();
+
+      this.autohide = this.element.hasAttribute('autohide');
+
+      if (this.autohide) {
+        this.element.classList.add('hidden');
+      }      
     }
    
     hide() {
+      this.element.classList.remove('visible');
       this.element.style.display = 'none';
     }
   
     show() {
-      this.element.style.display = '';
+      this.element.classList.add('visible');
+      this.element.style.display = null;
     }
-  
-    setup() {
-      this.height = this.element.clientHeight; 
-      this.handleHeight =  this.handleEl.clientHeight;
+
+    get height() {
+      return this.element.clientHeight;
+    }
+
+    get handleHeight() {
+      return this.handleEl.clientHeight;
     }
   
     startDrag(e: MouseEvent) {
@@ -129,12 +138,32 @@ module Carbon {
       if (this.options.onChange) {
         this.options.onChange(percent);
       }
+
+      this.timeout && clearTimeout(this.timeout);
+
+      this.onChange();
+    }
+
+    private onChange() {
+      if (this.autohide) {
+        this.element.classList.remove('hidden');
+
+        if (this.timeout) {
+          clearTimeout(this.timeout);
+        }
+
+        this.timeout = setTimeout(() => {
+          this.element.classList.add('hidden');
+        }, 250);
+      }
     }
   
     setPosition(position: number) {  
       let top = position * (this.height - this.handleEl.clientHeight);
   
       this.handleEl.style.top = top + 'px';
+
+      this.onChange();
     }
 
     destroy() {
@@ -252,19 +281,21 @@ module Carbon {
   	 
         trigger(this.element, 'inview');
         
+        this.scrollbar.active = false;
+
         this.scrollbar && this.scrollbar.hide();
       }
       else {
         this.element.classList.add('overflowing');
-  	 
+        
+        this.scrollbar.active = true;
+
     	  trigger(this.element, 'overflowing');
     
         if (this.scrollbar) {
           this.scrollbar.show();
 
-          this.scrollbar.handleEl.style.height = handleHeight + 'px';
-  
-          this.scrollbar.setup();
+          this.scrollbar.handleEl.style.height = handleHeight + 'px';  
         }
       }
     }
