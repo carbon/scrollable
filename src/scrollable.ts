@@ -12,7 +12,7 @@ module Carbon {
     },
     
     unblock() {
-       document.removeEventListener('selectstart', UserSelect.blockSelect);
+       document.removeEventListener('selectstart', UserSelect.blockSelect, true);
     }    
   };
 
@@ -26,6 +26,218 @@ module Carbon {
     }
   };
 
+  export class Scrollable {
+    static instances = new WeakMap<HTMLElement, Scrollable>();
+        
+    element: HTMLElement;
+    scrollbar: Scrollbar;
+    content: ScrollableContent;
+    
+    native = false;   
+
+    mutationObserver: MutationObserver;
+    resizeObserver: ResizeObserver;
+
+    static get(el: HTMLElement) : Scrollable {
+      let instance = Scrollable.instances.get(el) || new Scrollable(el);
+      
+      instance.poke();
+      
+      return instance;
+    }
+    
+    constructor(element: HTMLElement, options: any = { }) {
+      if (!element) throw new Error('[Scrollable] element is undefined');
+
+      this.element = element;
+  
+      if (this.element.dataset['setup']) return;
+  
+      this.element.dataset['setup'] = '1';
+
+      let contentEl: HTMLElement = this.element.querySelector('.content');
+      let scrollBarEl: HTMLElement = this.element.querySelector('.scrollbar');
+
+      if (!contentEl) {
+        throw new Error('No .content child');
+      }
+      
+      this.content = new ScrollableContent(contentEl, this);
+        
+      let ua = navigator.userAgent;
+  
+      if (!options.force && (ua.indexOf('Mac') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1)) {
+        this.native = true;
+  
+        scrollBarEl && scrollBarEl.remove();
+  
+        this.element.classList.add('native');
+      }
+      else {  
+        this.scrollbar = new Scrollbar(scrollBarEl, {
+          onChange: this.onScroll.bind(this)
+        });
+
+        this.content.element.addEventListener('wheel', this.onWheel.bind(this), true);
+      }
+      
+      if (window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver(entries => {
+          this.check();
+        });
+
+        this.resizeObserver.observe(this.element);
+        
+      }
+      else {
+        window.addEventListener('resize', this.check.bind(this));
+      }
+
+      this.check();   
+      this.watch();
+  
+      Scrollable.instances.set(this.element, this);
+    }
+
+    watch() {
+      if (this.mutationObserver) return;
+
+      if (!MutationObserver) return;
+
+      this.mutationObserver = new MutationObserver(mutations => {
+        this.check();
+      });
+      
+      this.mutationObserver.observe(this.content.element, {
+        attributes: false,
+        childList: true,
+        subtree: true
+      });
+    }  
+    
+    poke() {
+      this.check();
+    }
+    
+    get maxTop() {
+      return this.content.height - this.viewportHeight;
+    }
+
+    get viewportHeight() {
+     return this.content.element.clientHeight; 
+    }
+
+    get handleHeight() {
+      let contentInViewPercent = this.viewportHeight / this.content.height;
+  
+      return this.viewportHeight * contentInViewPercent;
+    }
+
+    get overflowing() {
+      let contentInViewPercent = this.viewportHeight / this.content.height;
+
+      return contentInViewPercent < 1;
+    }
+
+    check() {       
+      if (this.overflowing) {
+        this.element.classList.add('overflowing');
+        
+        this.scrollbar.active = true;
+
+    	  trigger(this.element, 'overflowing');
+    
+        if (this.scrollbar) {
+          this.scrollbar.show();
+
+          this.scrollbar.handleEl.style.height = this.handleHeight + 'px';  
+        }
+      }
+      else {
+        this.element.classList.remove('overflowing');
+  	 
+        trigger(this.element, 'inview');
+        
+        this.scrollbar.active = false;
+
+        this.scrollbar && this.scrollbar.hide();
+      }
+    }
+  
+    set position(value: number) {
+      let top = (this.content.height - this.viewportHeight) * value;
+  
+      this.content.element.scrollTop = top;
+    }
+
+    onScroll(value: number) {
+      this.position = value;
+    }
+  
+    onWheel(e: WheelEvent) {      
+      e.preventDefault(); // prevent the entire browser window from being scrolled
+      
+      let containerEl = e.target.closest('.scrollable');
+
+      // Ensure that the event wasn't handled by a nested scrollable element
+      if (containerEl !== this.element) {
+        return;
+      }
+
+      let distance = e.deltaY * 1;
+      let top = this.content.scrollTop;
+  
+      top += distance;
+  
+      if (top <= 0) top = 0;
+  
+      if (top > this.maxTop) {
+        top = this.maxTop;
+      }
+            
+      this.content.scrollTop = top;
+    }
+    
+    dispose() {
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+        this.resizeObserver = null;
+      }
+
+      if (this.mutationObserver) { 
+        this.mutationObserver.disconnect();
+        this.mutationObserver = null;
+      }
+    }
+  }
+
+  class ScrollableContent {
+    element: HTMLElement;
+    scrollable: Scrollable;
+
+    constructor(element: HTMLElement, scrollable: Scrollable) {
+      this.element = element;
+      this.scrollable = scrollable;
+    }
+
+    get height() {
+      return this.element.scrollHeight;
+    }
+
+    get scrollTop() {
+      return this.element.scrollTop;
+    }
+
+    set scrollTop(top: number) {
+      this.element.scrollTop = top;
+      
+      let position = top / this.scrollable.maxTop;
+
+      this.scrollable.scrollbar.position = position;
+      
+    }
+  }
+
   class Scrollbar {
     element: HTMLElement;
     handleEl: HTMLElement;
@@ -38,9 +250,9 @@ module Carbon {
     timeout: number;
     active = true;
 
-    listeners: Observer[] = [ ];
+    mouseMoveObserver: Observer;
     
-    constructor(element: HTMLElement, options) {
+    constructor(element: HTMLElement, options: any) {
       if (!element) { 
         throw new Error('[Scrollbar] element is undefined');
       }
@@ -51,7 +263,7 @@ module Carbon {
 
       if (!this.handleEl) throw new Error('[Scrollbar] missing .handle');
 
-      this.handleEl.addEventListener('mousedown', this.startDrag.bind(this));
+      this.handleEl.addEventListener('mousedown', this.startDrag.bind(this), true);
   
       this.options = options || { };
 
@@ -80,7 +292,7 @@ module Carbon {
       return this.handleEl.clientHeight;
     }
   
-    startDrag(e: MouseEvent) {
+    startDrag(e: PointerEvent) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -93,15 +305,16 @@ module Carbon {
      
       this.element.classList.add('dragging');
 
-      this.update(e);
-  	 
-      this.listeners.push(
-        new Observer(document, 'mousemove', this.update.bind(this)),
-        new Observer(document, 'mouseup', this.endDrag.bind(this))
-      );
+      this.onDrag(e);
+     
+      this.mouseMoveObserver = new Observer(document, 'mousemove', this.onDrag.bind(this));
+
+      document.addEventListener('mouseup', this.endDrag.bind(this), {
+        once: true
+      });     
     }
   
-    endDrag(e: MouseEvent) {
+    endDrag(e: PointerEvent) {
       e.preventDefault();
       e.stopPropagation();
       
@@ -111,14 +324,12 @@ module Carbon {
 
       this.element.classList.remove('dragging');
   
-      this.update(e);
+      this.onDrag(e);
       
-      while (this.listeners.length > 0) {        
-        this.listeners.pop().stop();
-      }
+      this.mouseMoveObserver.stop();
     }
   
-    update(e) {
+    onDrag(e: PointerEvent) {
       let delta = e.pageY - this.mouseStartY;
   
       let top = this.baseY + delta;
@@ -158,8 +369,11 @@ module Carbon {
       }
     }
   
-    setPosition(position: number) {  
-      let top = position * (this.height - this.handleEl.clientHeight);
+    get position() {
+      return this.height
+    }
+    set position(value: number) {  
+      let top = value * (this.height - this.handleEl.clientHeight);
   
       this.handleEl.style.top = top + 'px';
 
@@ -168,186 +382,6 @@ module Carbon {
 
     destroy() {
       this.element.remove();
-    }
-  }
-
-  export class Scrollable {
-    static instances = new WeakMap<HTMLElement, Scrollable>();
-        
-    element: HTMLElement;
-    contentEl: HTMLElement;
-    scrollbar: Scrollbar;
-    
-    viewportHeight: number;
-    contentHeight: number;
-    maxTop: number;
-    
-    native = false;   
-
-    mutationObserver: MutationObserver;
-    resizeObserver: ResizeObserver;
-
-    static get(el: HTMLElement) : Scrollable {
-      let instance = Scrollable.instances.get(el) || new Scrollable(el);
-      
-      instance.poke();
-      
-      return instance;
-    }
-    
-    constructor(element: HTMLElement, options : any = { }) {
-      if (!element) throw new Error('[Scrollable] element is undefined');
-
-      this.element = element;
-  
-      if (this.element.dataset['setup']) return;
-  
-      this.element.dataset['setup'] = '1';
-
-      this.contentEl = this.element.querySelector('.content') as HTMLElement;
-    
-      if (!this.contentEl) throw new Error('.content not found');
-      
-      let scrollBarEl = this.element.querySelector('.scrollbar') as HTMLElement;
-  
-      let ua = navigator.userAgent;
-  
-      if (!options.force && (ua.indexOf('Macintosh') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1)) {
-        this.native = true;
-  
-        scrollBarEl && scrollBarEl.remove();
-  
-        this.element.classList.add('native');
-      }
-      else {  
-        this.scrollbar = new Scrollbar(scrollBarEl, {
-          onChange: this.onScroll.bind(this)
-        });
-
-        this.contentEl.addEventListener('wheel', this.onWheel.bind(this), true);
-      }
-      
-      if (window.ResizeObserver) {
-        this.resizeObserver = new ResizeObserver(entries => {
-          this.check();
-        });
-
-        this.resizeObserver.observe(this.element);
-        
-      }
-      else {
-        window.addEventListener('resize', this.check.bind(this));
-      }
-
-      this.check();   
-      this.watch();
-  
-      Scrollable.instances.set(this.element, this);
-    }
-
-    watch() {
-      if (this.mutationObserver) return;
-
-      if (!MutationObserver) return;
-
-      this.mutationObserver = new MutationObserver(mutations => {
-        this.check();
-      });
-      
-      this.mutationObserver.observe(this.contentEl, {
-        attributes: false,
-        childList: true,
-        subtree: true
-      });
-    }  
-    
-    poke() {
-      this.check();
-    }
-    
-    check() {      
-      this.viewportHeight = this.contentEl.clientHeight;
-  
-      this.contentHeight = this.contentEl.scrollHeight;
-  
-      this.maxTop = this.contentHeight - this.viewportHeight;
-  
-      let contentInViewPercent = this.viewportHeight / this.contentHeight;
-  
-      let handleHeight = this.viewportHeight * contentInViewPercent;
-      
-      if (contentInViewPercent >= 1) {
-        this.element.classList.remove('overflowing');
-  	 
-        trigger(this.element, 'inview');
-        
-        this.scrollbar.active = false;
-
-        this.scrollbar && this.scrollbar.hide();
-      }
-      else {
-        this.element.classList.add('overflowing');
-        
-        this.scrollbar.active = true;
-
-    	  trigger(this.element, 'overflowing');
-    
-        if (this.scrollbar) {
-          this.scrollbar.show();
-
-          this.scrollbar.handleEl.style.height = handleHeight + 'px';  
-        }
-      }
-    }
-  
-    onScroll(value: number) {      
-      let top = (this.contentHeight - this.viewportHeight) * value;
-  
-      this.scrollTo(top);
-    }
-  
-    scrollTo(top: number) {
-      this.contentEl.scrollTop = top;
-    }
-  
-    onWheel(e: WheelEvent) {      
-      e.preventDefault(); // prevent the entire browser window from being scrolled
-      
-      let containerEl = e.target.closest('.scrollable');
-
-      // Ensure that the event wasn't handled by a nested scrollable element
-      if (containerEl !== this.element) {
-        return;
-      }
-
-      let distance = e.deltaY * 1;
-      let top = this.contentEl.scrollTop;
-  
-      top += distance;
-  
-      if (top <= 0) top = 0;
-  
-      if (top > this.maxTop) {
-        top = this.maxTop;
-      }
-      
-      this.scrollTo(top);
-  
-      let position = top / this.maxTop;
-      
-      this.scrollbar.setPosition(position);
-    }
-    
-    dispose() {
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-        this.resizeObserver = null;
-      }
-
-      if (this.observer) { 
-        this.observer.disconnect();
-        this.observer = null;
-      }
     }
   }
   

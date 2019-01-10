@@ -1,6 +1,6 @@
 {
   "name": "scrollable",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "main": "lib/scrollable.js",
   "author": "Jason Nelson",
   "license": "MIT",
