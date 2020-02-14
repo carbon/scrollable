@@ -38,6 +38,10 @@ module Carbon {
     mutationObserver: MutationObserver;
     resizeObserver: ResizeObserver;
 
+    animationFrameRequest: any;
+
+    // Reactive
+    
     static get(el: HTMLElement) : Scrollable {
       let instance = Scrollable.instances.get(el) || new Scrollable(el);
       
@@ -82,9 +86,7 @@ module Carbon {
       }
       
       if (window.ResizeObserver) {
-        this.resizeObserver = new ResizeObserver(entries => {
-          this.check();
-        });
+        this.resizeObserver = new ResizeObserver(this.onResize.bind(this));
 
         this.resizeObserver.observe(this.element);
         
@@ -99,14 +101,16 @@ module Carbon {
       Scrollable.instances.set(this.element, this);
     }
 
+    onResize(e) {
+      this.requestCheck();
+    }
+
     watch() {
       if (this.mutationObserver) return;
 
       if (!MutationObserver) return;
 
-      this.mutationObserver = new MutationObserver(mutations => {
-        this.check();
-      });
+      this.mutationObserver = new MutationObserver(this.requestCheck.bind(this));
       
       this.mutationObserver.observe(this.content.element, {
         attributes: false,
@@ -115,8 +119,14 @@ module Carbon {
       });
     }  
     
+    requestCheck() {
+      this.animationFrameRequest && cancelAnimationFrame(this.animationFrameRequest);
+
+      this.animationFrameRequest = requestAnimationFrame(this.check.bind(this));
+    }
+
     poke() {
-      this.check();
+      this.requestCheck();
     }
     
     get maxTop() {
