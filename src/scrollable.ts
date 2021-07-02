@@ -33,12 +33,14 @@ module Carbon {
     scrollbar: Scrollbar;
     content: ScrollableContent;
     
-    native = false;   
+    native = false; 
+    _lineHeight: number;
 
     mutationObserver: MutationObserver;
     resizeObserver: ResizeObserver;
 
-    animationFrameRequest: any;
+    checkRequest: any;
+    hasNestedControls: boolean;
 
     // Reactive
     
@@ -55,6 +57,8 @@ module Carbon {
 
       this.element = element;
   
+      this.hasNestedControls = this.element.querySelectorAll('.scrollable').length > 0;
+
       if (this.element.dataset['setup']) return;
   
       this.element.dataset['setup'] = '1';
@@ -120,9 +124,8 @@ module Carbon {
     }  
     
     requestCheck() {
-      this.animationFrameRequest && cancelAnimationFrame(this.animationFrameRequest);
-
-      this.animationFrameRequest = requestAnimationFrame(this.check.bind(this));
+      this.checkRequest && cancelAnimationFrame(this.checkRequest);
+      this.checkRequest = requestAnimationFrame(this.check.bind(this));
     }
 
     poke() {
@@ -150,6 +153,8 @@ module Carbon {
     }
 
     check() {       
+      this.checkRequest = null;
+
       if (this.overflowing) {
         this.element.classList.add('overflowing');
         
@@ -180,24 +185,56 @@ module Carbon {
       this.content.element.scrollTop = top;
     }
 
+    get lineHeight(): number {
+      if (this._lineHeight !== undefined) { 
+        return this._lineHeight;
+      }
+
+      let tempEl = document.createElement('p');
+
+      tempEl.textContent = 'A';
+
+      this.content.element.append(tempEl);
+      
+      this._lineHeight = tempEl.clientHeight;
+
+      if (this._lineHeight === 0) {
+        this._lineHeight = 20;
+      }
+      tempEl.remove();
+
+      return this._lineHeight;
+    }
+
     onScroll(value: number) {
       this.position = value;
     }
   
-    onWheel(e: WheelEvent) {      
+    onWheel(e: WheelEvent) {
       e.preventDefault(); // prevent the entire browser window from being scrolled
       
-      let containerEl = e.target.closest('.scrollable');
+      let targetEl = e.target as HTMLElement;
 
-      // Ensure that the event wasn't handled by a nested scrollable element
-      if (containerEl !== this.element) {
-        return;
+      if (this.hasNestedControls) {
+        let containerEl = targetEl.closest('.scrollable');
+
+        // Ensure that the event wasn't handled by a nested scrollable element
+        if (containerEl !== this.element) {
+          return;
+        }
       }
 
-      let distance = e.deltaY * 1;
+      let pY = e.deltaY * 1; // y delta in pixels
+
+      if (e.deltaMode === 1) { // LINE        
+        pY *= this.lineHeight;
+      } else if (e.deltaMode === 2) { // PAGE
+        pY *= this.viewportHeight;
+      }
+
       let top = this.content.scrollTop;
   
-      top += distance;
+      top += pY;
   
       if (top <= 0) top = 0;
   
@@ -220,6 +257,7 @@ module Carbon {
       }
     }
   }
+
 
   class ScrollableContent {
     element: HTMLElement;
@@ -382,6 +420,7 @@ module Carbon {
     get position() {
       return this.height
     }
+
     set position(value: number) {  
       let top = value * (this.height - this.handleEl.clientHeight);
   
