@@ -79,10 +79,8 @@ module Carbon {
         this.native = true;
   
         scrollBarEl && scrollBarEl.remove();
-  
-        this.element.classList.add('native');
         
-      
+        this.element.classList.add('native');
       }
       else {  
         this.scrollbar = new Scrollbar(scrollBarEl, {
