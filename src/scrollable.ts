@@ -72,15 +72,17 @@ module Carbon {
       }
       
       this.content = new ScrollableContent(contentEl, this);
-        
-      let ua = navigator.userAgent;
-  
-      if (!options.force && (ua.indexOf('Mac') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1)) {
+          
+      let isMobile = navigator.maxTouchPoints && navigator.maxTouchPoints > 2;
+
+      if (!options.force && (navigator.userAgent.indexOf('Mac') > -1 || isMobile)) {
         this.native = true;
   
         scrollBarEl && scrollBarEl.remove();
   
         this.element.classList.add('native');
+        
+      
       }
       else {  
         this.scrollbar = new Scrollbar(scrollBarEl, {
@@ -282,7 +284,6 @@ module Carbon {
       let position = top / this.scrollable.maxTop;
 
       this.scrollable.scrollbar.position = position;
-      
     }
   }
 
