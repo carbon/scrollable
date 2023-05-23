@@ -1,18 +1,17 @@
 module Carbon {   
   let UserSelect = {
     blockSelect(e: Event) { 
-     e.preventDefault();
-     e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
     },
     
     block() {
       document.body.focus();
-      
       document.addEventListener('selectstart', UserSelect.blockSelect, true);
     },
     
     unblock() {
-       document.removeEventListener('selectstart', UserSelect.blockSelect, true);
+      document.removeEventListener('selectstart', UserSelect.blockSelect, true);
     }    
   };
 
@@ -53,7 +52,9 @@ module Carbon {
     }
     
     constructor(element: HTMLElement, options: any = { }) {
-      if (!element) throw new Error('[Scrollable] element is undefined');
+      if (!element) { 
+        throw new Error('[Scrollable] element is undefined');
+      }
 
       this.element = element;
   
@@ -257,7 +258,6 @@ module Carbon {
       }
     }
   }
-
 
   class ScrollableContent {
     element: HTMLElement;
