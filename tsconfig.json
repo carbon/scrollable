@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
-    "module": "commonjs",
+    "target": "esnext",
+    "module": "esnext",
     "alwaysStrict": true,
     "removeComments": true,
-    "watch": false,
     "sourceMap": false,
-    "lib": [ "dom", "es5", "es6" ],    
+    "lib": [ "dom", "ES2024"],    
     "outDir": "lib/"    
   },
   "files": [
